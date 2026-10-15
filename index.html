@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShopDesk – Store &amp; Inventory</title>
+<style>
+:root{--bg:#f6f7fb;--card:#fff;--tx:#1b1f2a;--mu:#6b7280;--ac:#4f46e5;--bd:#e5e7eb;--bad:#dc2626}
+@media(prefers-color-scheme:dark){:root{--bg:#12141c;--card:#1c1f2b;--tx:#e8eaf0;--mu:#9aa1b2;--bd:#2c3040}}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--tx)}
+header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;background:var(--card);border-bottom:1px solid var(--bd);position:sticky;top:0}
+nav button,.btn{background:var(--ac);color:#fff;border:0;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:14px}
+nav button.off{background:transparent;color:var(--tx);border:1px solid var(--bd)}
+main{max-width:1000px;margin:20px auto;padding:0 16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px}
+.em{font-size:42px}.mu{color:var(--mu);font-size:13px}
+table{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;overflow:hidden}
+th,td{padding:10px;text-align:left;border-bottom:1px solid var(--bd);font-size:14px}
+input{padding:8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);width:100%}
+.row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:8px;margin-bottom:14px}
+.ghost{background:transparent!important;color:var(--bad)!important;border:1px solid var(--bd)!important}
+.low{color:var(--bad);font-weight:600}.wrap{overflow-x:auto}
+@media(max-width:600px){.row{grid-template-columns:1fr 1fr}}
+</style></head><body>
+<header><b>🛍️ ShopDesk</b><nav><button id="t1">Store</button> <button id="t2" class="off">Inventory</button> <button id="t3" class="off">Cart (<span id="cc">0</span>)</button></nav></header>
+<main id="m"></main>
+<script>
+let P=[{id:1,n:"Notebook",e:"📓",p:120,s:25},{id:2,n:"Headphones",e:"🎧",p:1499,s:8},{id:3,n:"Water Bottle",e:"🧴",p:349,s:15},{id:4,n:"Backpack",e:"🎒",p:999,s:4},{id:5,n:"Desk Lamp",e:"💡",p:599,s:0}];
+try{const x=localStorage.getItem("shopdesk");if(x)P=JSON.parse(x)}catch(e){}
+let cart={},tab=1,nid=100;
+const save=()=>{try{localStorage.setItem("shopdesk",JSON.stringify(P))}catch(e){}};
+const $=s=>document.querySelector(s),inr=n=>"₹"+n.toLocaleString("en-IN");
+function add(id){const p=P.find(x=>x.id==id),q=cart[id]||0;if(q<p.s){cart[id]=q+1;draw()}}
+function checkout(){P.forEach(p=>p.s-=cart[p.id]||0);cart={};save();alert("Order placed! Stock updated.");draw()}
+function addP(){const n=$("#fn").value.trim(),p=+$("#fp").value,s=+$("#fs").value,e=$("#fe").value||"📦";if(!n||p<0||s<0)return;P.push({id:nid++,n,e,p,s});save();draw()}
+function setS(id,v){P.find(x=>x.id==id).s=Math.max(0,+v||0);save();draw()}
+function del(id){P=P.filter(x=>x.id!=id);delete cart[id];save();draw()}
+function draw(){
+ $("#cc").textContent=Object.values(cart).reduce((a,b)=>a+b,0);
+ [1,2,3].forEach(i=>$("#t"+i).className=tab==i?"":"off");
+ let h="";
+ if(tab==1)h='<div class="grid">'+P.map(p=>`<div class="card"><div class="em">${p.e}</div><b>${p.n}</b><div>${inr(p.p)}</div><div class="mu">${p.s?p.s+" in stock":"Out of stock"}</div><br><button class="btn" ${p.s?"":"disabled"} onclick="add(${p.id})">Add to cart</button></div>`).join("")+"</div>";
+ if(tab==2){const v=P.reduce((a,p)=>a+p.p*p.s,0);
+  h=`<p class="mu">${P.length} products · stock value ${inr(v)}</p><div class="row"><input id="fn" placeholder="Name"><input id="fp" type="number" placeholder="Price"><input id="fs" type="number" placeholder="Stock"><input id="fe" placeholder="Emoji"><button class="btn" onclick="addP()">Add</button></div><div class="wrap"><table><tr><th>Product</th><th>Price</th><th>Stock</th><th>Status</th><th></th></tr>`+P.map(p=>`<tr><td>${p.e} ${p.n}</td><td>${inr(p.p)}</td><td><input type="number" min="0" value="${p.s}" style="width:80px" onchange="setS(${p.id},this.value)"></td><td class="${p.s<5?"low":""}">${p.s==0?"Out of stock":p.s<5?"Low stock":"OK"}</td><td><button class="btn ghost" onclick="del(${p.id})">Delete</button></td></tr>`).join("")+"</table></div>";}
+ if(tab==3){const it=P.filter(p=>cart[p.id]);const t=it.reduce((a,p)=>a+p.p*cart[p.id],0);
+  h=it.length?'<div class="wrap"><table>'+it.map(p=>`<tr><td>${p.e} ${p.n}</td><td>× ${cart[p.id]}</td><td>${inr(p.p*cart[p.id])}</td></tr>`).join("")+`</table></div><h3>Total: ${inr(t)}</h3><button class="btn" onclick="checkout()">Checkout</button>`:'<p class="mu">Your cart is empty.</p>';}
+ $("#m").innerHTML=h}
+[1,2,3].forEach(i=>$("#t"+i).onclick=()=>{tab=i;draw()});draw();
+</script></body></html>
